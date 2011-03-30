@@ -1,35 +1,35 @@
 import re
-from PMS import *
-from PMS.Objects import *
-from PMS.Shortcuts import *
 
 ####################################################################################################
 
-BBCPODCASTS_PREFIX                   = "/music/bbcpodcasts"
+BBCPODCASTS_URL         = "http://www.bbc.co.uk/podcasts"
+BBC_URL                 = "http://www.bbc.co.uk"
+BBCPODCASTS_SEARCH_URL  = "http://www.bbc.co.uk/podcasts/quick_search/"
+BBCPODCASTS_SERIES_URL  = "http://www.bbc.co.uk/podcasts/series/"
+BBCPODCASTS_IMAGE_URL   = "http://www.bbc.co.uk/podcasts/assets/artwork/266/%s.jpg"
 
-BBCPODCASTS_URL                      = "http://www.bbc.co.uk/podcasts"
-BBC_URL                              = "http://www.bbc.co.uk"
-BBCPODCASTS_SEARCH_URL               = "http://www.bbc.co.uk/podcasts/quick_search/"
-BBCPODCASTS_SERIES_URL               = "http://www.bbc.co.uk/podcasts/series/"
-BBCPODCASTS_IMAGE_URL                = "http://www.bbc.co.uk/podcasts/assets/artwork/266/%s.jpg"
+DEBUG_XML_RESPONSE		= False
+CACHE_INTERVAL          = 1800 # These cache times are relatively short since the pages change fairly frequently
+CACHE_RSS_FEED_INTERVAL = 1800
+CACHE_SEARCH_INTERVAL	= 600
 
-DEBUG_XML_RESPONSE		     = False
-CACHE_INTERVAL                       = 1800 # These cache times are relatively short since the pages change fairly frequently
-CACHE_RSS_FEED_INTERVAL              = 1800
-CACHE_SEARCH_INTERVAL		     = 600
+ITUNES_NAMESPACE = {'itunes':'http://www.itunes.com/dtds/podcast-1.0.dtd'}
 
-ITUNES_NAMESPACE                      = {'itunes':'http://www.itunes.com/dtds/podcast-1.0.dtd'}
+ART = 'art-default.jpg'
+ICON = 'icon-default.png'
 
 ####################################################################################################
 
 def Start():
-  Plugin.AddPrefixHandler(BBCPODCASTS_PREFIX, Browser, L('bbcpodcasts'), "icon-default.png", "art-default.png")
+  Plugin.AddPrefixHandler('/music/bbcpodcasts', Browser, L('bbcpodcasts'), ICON, ART)
   Plugin.AddViewGroup('List', viewMode='List', mediaType='items')
-  Plugin.AddViewGroup("Details", viewMode="InfoList", mediaType="items")
+  Plugin.AddViewGroup('InfoList', viewMode='InfoList', mediaType='items')
   MediaContainer.content = 'Items'
-  MediaContainer.art = R("art-default.png")
+  MediaContainer.art = R(ART)
+  MediaContainer.title1 = L('bbcpodcasts')
   MediaContainer.viewGroup = 'List'
-  HTTP.SetCacheTime(CACHE_INTERVAL)
+  DirectoryItem.thumb = R(ICON)
+  HTTP.CacheTime = CACHE_INTERVAL
 
 # No UpdateCache method is used, as this would only be useful for 'editors picks' / 'recently added' 
 # And even for those pages the delay in fetching a single page is relatively short
@@ -42,8 +42,6 @@ def Browser(sender=False, topLevel=True, stationId=None, stationName=None, genre
 
   if title1:
     dir.title1 = title1
-  else:
-    dir.title1 = L('bbcpodcasts')
 
   if title2:
     dir.title2 = title2
@@ -62,13 +60,13 @@ def Browser(sender=False, topLevel=True, stationId=None, stationName=None, genre
     url += "/" + order
 
   if pageNumber:
-    url += "/page" + pageNumber
+    url += "?page=" + pageNumber
 
   url += "/"
 
   if selector:
 
-    page = XML.ElementFromURL(url, isHTML=True, cacheTime=CACHE_INTERVAL)
+    page = HTML.ElementFromURL(url, cacheTime=CACHE_INTERVAL)
 
     # We need to display a choice of either stations or genres
 
@@ -84,13 +82,13 @@ def Browser(sender=False, topLevel=True, stationId=None, stationName=None, genre
 
       if selector=='filterstation':
 
-        optionId = re.search(r'^/podcasts/([^/]+)/', url).group(1)
-        dir.Append(Function(DirectoryItem(Browser, title=optionName, summary='', subittle='', thumb=L(optionName)), topLevel=False, stationId=optionId, stationName=optionName, genreId=genreId, genreName=genreName, order=order, selector=None, title1=title2, title2=optionName))
+        optionId = re.search(r'^/podcasts/([^/]+)', url).group(1)
+        dir.Append(Function(DirectoryItem(Browser, title=optionName, summary='', subittle='', thumb=Function(GetThumb, url=L(optionName))), topLevel=False, stationId=optionId, stationName=optionName, genreId=genreId, genreName=genreName, order=order, selector=None, title1=title2, title2=optionName))
 
       else: # filtergenre
 
-        optionId = re.search(r'/genre/([^/]+)/', url).group(1)
-        dir.Append(Function(DirectoryItem(Browser, title=optionName, summary='', subittle='', thumb=R('icon-default.png')), topLevel=False, stationId=stationId, stationName=stationName, genreId=optionId, genreName=optionName, order=order, selector=None, title1=title2, title2=optionName))
+        optionId = re.search(r'/genre/([^/]+)', url).group(1)
+        dir.Append(Function(DirectoryItem(Browser, title=optionName, summary='', subittle=''), topLevel=False, stationId=stationId, stationName=stationName, genreId=optionId, genreName=optionName, order=order, selector=None, title1=title2, title2=optionName))
 
   elif not order:
 
@@ -98,26 +96,26 @@ def Browser(sender=False, topLevel=True, stationId=None, stationName=None, genre
 
     if topLevel:
        # Show the highlights on the top level menu
-       dir.Append(Function(DirectoryItem(BrowseHighlights, title=L('editorspicks'), summary='', subtitle='', thumb=R('icon-default.png')), highlightCategory='editorspicks'))
-       dir.Append(Function(DirectoryItem(BrowseHighlights, title=L('recentlylaunched'), summary='', subtitle='', thumb=R('icon-default.png')), highlightCategory='recentlylaunched'))
+       dir.Append(Function(DirectoryItem(BrowseHighlights, title=L('editorspicks'), summary='', subtitle=''), highlightCategory='editorspicks'))
+       dir.Append(Function(DirectoryItem(BrowseHighlights, title=L('recentlylaunched'), summary='', subtitle=''), highlightCategory='recentlylaunched'))
 
 
     if not stationId:
-      dir.Append(Function(DirectoryItem(Browser, title=L('filterstation'), summary='', subittle='', thumb=R('icon-default.png')), topLevel=False, stationId=stationId, stationName=stationName, genreId=genreId, genreName=genreName, order=None, selector='filterstation', title1=title2, title2=L('filterstation')))
+      dir.Append(Function(DirectoryItem(Browser, title=L('filterstation'), summary='', subittle=''), topLevel=False, stationId=stationId, stationName=stationName, genreId=genreId, genreName=genreName, order=None, selector='filterstation', title1=title2, title2=L('filterstation')))
 
     if not genreId:
-      dir.Append(Function(DirectoryItem(Browser, title=L('filtergenre'), summary='', subittle='', thumb=R('icon-default.png')), topLevel=False, stationId=stationId, stationName=stationName, genreId=genreId, genreName=genreName, order=None, selector='filtergenre', title1=title2, title2=L('filtergenre')))
+      dir.Append(Function(DirectoryItem(Browser, title=L('filtergenre'), summary='', subittle=''), topLevel=False, stationId=stationId, stationName=stationName, genreId=genreId, genreName=genreName, order=None, selector='filtergenre', title1=title2, title2=L('filtergenre')))
 
 
-    dir.Append(Function(DirectoryItem(Browser, title=L('lastupdated'), summary='', subittle='', thumb=R('icon-default.png')), topLevel=False, stationId=stationId, stationName=stationName, genreId=genreId, genreName=genreName, order='lastupdated', selector=None, title1=title2, title2=L('lastupdated')))
-    dir.Append(Function(DirectoryItem(Browser, title=L('a-z'), summary='', subittle='', thumb=R('icon-default.png')), topLevel=False, stationId=stationId, stationName=stationName, genreId=genreId, genreName=genreName, order='a-z', selector=None, title1=title2, title2=L('a-z')))
-    dir.Append(Function(DirectoryItem(Browser, title=L('z-a'), summary='', subittle='', thumb=R('icon-default.png')), topLevel=False, stationId=stationId, stationName=stationName, genreId=genreId, genreName=genreName, order='z-a', selector=None, title1=title2, title2=L('z-a')))
-    dir.Append(Function(DirectoryItem(Browser, title=L('duration_desc'), summary='', subittle='', thumb=R('icon-default.png')), topLevel=False, stationId=stationId, stationName=stationName, genreId=genreId, genreName=genreName, order='duration_desc', selector=None, title1=title2, title2=L('duration_desc')))
-    dir.Append(Function(DirectoryItem(Browser, title=L('duration_asc'), summary='', subittle='', thumb=R('icon-default.png')), topLevel=False, stationId=stationId, stationName=stationName, genreId=genreId, genreName=genreName, order='duration_asc', selector=None, title1=title2, title2=L('duracion_asc')))
+    dir.Append(Function(DirectoryItem(Browser, title=L('lastupdated'), summary='', subittle=''), topLevel=False, stationId=stationId, stationName=stationName, genreId=genreId, genreName=genreName, order='lastupdated', selector=None, title1=title2, title2=L('lastupdated')))
+    dir.Append(Function(DirectoryItem(Browser, title=L('a-z'), summary='', subittle=''), topLevel=False, stationId=stationId, stationName=stationName, genreId=genreId, genreName=genreName, order='a-z', selector=None, title1=title2, title2=L('a-z')))
+    dir.Append(Function(DirectoryItem(Browser, title=L('z-a'), summary='', subittle=''), topLevel=False, stationId=stationId, stationName=stationName, genreId=genreId, genreName=genreName, order='z-a', selector=None, title1=title2, title2=L('z-a')))
+    dir.Append(Function(DirectoryItem(Browser, title=L('duration_desc'), summary='', subittle=''), topLevel=False, stationId=stationId, stationName=stationName, genreId=genreId, genreName=genreName, order='duration_desc', selector=None, title1=title2, title2=L('duration_desc')))
+    dir.Append(Function(DirectoryItem(Browser, title=L('duration_asc'), summary='', subittle=''), topLevel=False, stationId=stationId, stationName=stationName, genreId=genreId, genreName=genreName, order='duration_asc', selector=None, title1=title2, title2=L('duracion_asc')))
 
     if topLevel:
       # This is the top level menu, show the search entry
-      dir.Append(Function(SearchDirectoryItem(Search, title=L('search'), prompt=L('searchprompt'), thumb=R('search.png'))))
+      dir.Append(Function(SearchDirectoryItem(Search, title=L('search'), prompt=L('searchprompt'), thumb=R('icon-search.png'))))
 
 
 
@@ -125,9 +123,9 @@ def Browser(sender=False, topLevel=True, stationId=None, stationName=None, genre
 
     # An order is selected (eg a-z), show the availale podcasts
 
-    dir.viewGroup = 'Details'
+    dir.viewGroup = 'InfoList'
 
-    page = XML.ElementFromURL(url, isHTML=True, cacheTime=CACHE_INTERVAL)
+    page = HTML.ElementFromURL(url, cacheTime=CACHE_INTERVAL)
 
     podcasts = page.xpath("//div[@class='pc-results-box']")
 
@@ -183,7 +181,7 @@ def Browser(sender=False, topLevel=True, stationId=None, stationName=None, genre
 
         podcastSubtitle = podcastGlobalAvailability + "\n" + podcastSubtitle + "\n" + L('frequency') + ": " + podcastFrequency + "\n" + L('availability') + ": " + podcastNumberAvailable
 
-      dir.Append(Function(DirectoryItem(ShowPodcast, title=podcastName, summary=podcastDescription, subtitle=podcastSubtitle, thumb=podcastImage), podcastName=podcastName, podcastUrl=podcastUrl, podcastImage=podcastImage, title1=title2))
+      dir.Append(Function(DirectoryItem(ShowPodcast, title=podcastName, summary=podcastDescription, subtitle=podcastSubtitle, thumb=Function(GetThumb, url=podcastImage)), podcastName=podcastName, podcastUrl=podcastUrl, podcastImage=podcastImage, title1=title2))
 
 
     # See if we have multiple pages
@@ -193,14 +191,14 @@ def Browser(sender=False, topLevel=True, stationId=None, stationName=None, genre
 
       # We have a next page link
       nextPageUrl = nextLinks[0].get('href')
-      nextPageNumber = re.search(r'page(\d+)$', nextPageUrl).group(1)
+      nextPageNumber = re.search(r'page=(\d+)$', nextPageUrl).group(1)
 
-      dir.Append(Function(DirectoryItem(Browser, title=L('nextpage'), summary='', subittle='', thumb=R('icon-default.png')), topLevel=False, stationId=stationId, stationName=stationName, genreId=genreId, genreName=genreName, order=order, selector=None, pageNumber=nextPageNumber))
+      dir.Append(Function(DirectoryItem(Browser, title=L('nextpage'), summary='', subittle=''), topLevel=False, stationId=stationId, stationName=stationName, genreId=genreId, genreName=genreName, order=order, selector=None, pageNumber=nextPageNumber))
 
 
 
   if DEBUG_XML_RESPONSE:
-    PMS.Log(dir.Content())
+    Log(dir.Content())
   return dir
 
 
@@ -209,14 +207,11 @@ def BrowseHighlights(sender, highlightCategory):
 
   # Browse either the Editors Picks or Recently Launched
 
-  dir = MediaContainer()
-  dir.viewGroup = 'Details'
-  dir.title1 = L('bbcpodcasts')
-  dir.title2 = L(highlightCategory)
+  dir = MediaContainer(viewGroup = 'InfoList', title2 = L(highlightCategory))
 
   url = BBCPODCASTS_URL + "/"
 
-  page = XML.ElementFromURL(url, isHTML=True, cacheTime=CACHE_INTERVAL)
+  page = HTML.ElementFromURL(url, cacheTime=CACHE_INTERVAL)
 
   if highlightCategory == 'editorspicks':
     podcasts = page.xpath("//div[@id='pc-promo-editors']/div[@class='pc-promo-item']")
@@ -256,10 +251,10 @@ def BrowseHighlights(sender, highlightCategory):
 
       podcastSubtitle = podcastGlobalAvailability + "\n" + L('updateddate') + ": " + podcastEpisodeDate + "\n" + L('averagelength') + ": " + podcastDuration
 
-    dir.Append(Function(DirectoryItem(ShowPodcast, title=podcastName, summary=podcastDescription, subtitle=podcastSubtitle, thumb=podcastImage), podcastName=podcastName, podcastUrl=podcastUrl, podcastImage=podcastImage, title1=L(highlightCategory)))
+    dir.Append(Function(DirectoryItem(ShowPodcast, title=podcastName, summary=podcastDescription, subtitle=podcastSubtitle, thumb=Function(GetThumb, url=podcastImage)), podcastName=podcastName, podcastUrl=podcastUrl, podcastImage=podcastImage, title1=L(highlightCategory)))
 
   if DEBUG_XML_RESPONSE:
-    PMS.Log(dir.Content())
+    Log(dir.Content())
   return dir
 
 
@@ -267,21 +262,16 @@ def BrowseHighlights(sender, highlightCategory):
 
 def ShowPodcast(sender, podcastName=None, podcastUrl=None, podcastImage=None, title1=None):
 
-  dir = MediaContainer()
-  dir.viewGroup = 'Details'
+  dir = MediaContainer(viewGroup = 'InfoList', title2 = podcastName)
   if title1:
     dir.title1 = title1
-  else:
-    dir.title1 = L('bbcpodcasts')
 
-  dir.title2 = podcastName
-
-  page = XML.ElementFromURL(podcastUrl, isHTML=True, cacheTime=CACHE_INTERVAL)
+  page = HTML.ElementFromURL(podcastUrl, cacheTime=CACHE_INTERVAL)
 
   if len ( page.xpath("//div[@id='pc-help-why']") ) > 0:
 
     # Podcast is not available to the user as they are outside the UK.
-    return (MessageContainer(header=L('notavailable'), message=L('notoutsideuk'), title1=L('bbcpodcasts')))
+    return (MessageContainer(header=L('notavailable'), message=L('notoutsideuk')))
 
 
   else:
@@ -290,7 +280,7 @@ def ShowPodcast(sender, podcastName=None, podcastUrl=None, podcastImage=None, ti
     rssUrl = page.xpath("//div[@id='pc-subscribe-buttons']/ul/li[@id='pc-sublink-rss']/a")[0].get('href')
   #  rssUrl = page.xpath("//li[@id='pc-sublink-rss']/a")[0].get('href')
 
-    rss = XML.ElementFromURL(rssUrl, isHTML=False, cacheTime=CACHE_RSS_FEED_INTERVAL)
+    rss = XML.ElementFromURL(rssUrl, cacheTime=CACHE_RSS_FEED_INTERVAL)
 
     episodes = rss.xpath("//channel/item")
 
@@ -321,26 +311,24 @@ def ShowPodcast(sender, podcastName=None, podcastUrl=None, podcastImage=None, ti
           episodeLength = str(episodeLengthSeconds * 1000)
 
 
-        dir.Append(TrackItem(episodeUrl, episodeTitle, artist=podcastName, album=L('bbcpodcasts'), summary=episodeDescription, subtitle=episodeSubtitle, duration=episodeLength, thumb=podcastImage)) 
+        dir.Append(TrackItem(episodeUrl, episodeTitle, artist=podcastName, album=L('bbcpodcasts'), summary=episodeDescription, subtitle=episodeSubtitle, duration=episodeLength, thumb=Function(GetThumb, url=podcastImage))) 
 
 
       if DEBUG_XML_RESPONSE:
-        PMS.Log(dir.Content())
+        Log(dir.Content())
       return dir
 
     else:
 
       # No episodes currently available for the podcast
 
-      return (MessageContainer(header=L('bbcpodcasts'), message=L('noepisodes'), title1=L('bbcpodcasts')))
+      return (MessageContainer(header=L('bbcpodcasts'), message=L('noepisodes')))
 
 
 
 def Search(sender, query):
 
-  dir = MediaContainer()
-  dir.title1 = L('bbcpodcasts') 
-  dir.title2 = L('searchresults')
+  dir = MediaContainer(title2 = L('searchresults'))
 
   query = query.replace(' ', '_')
 
@@ -368,17 +356,17 @@ def Search(sender, query):
         podcastUrl = BBCPODCASTS_SERIES_URL + shortTitle 
         podcastImage = BBCPODCASTS_IMAGE_URL % shortTitle
 
-        dir.Append(Function(DirectoryItem(ShowPodcast, title=podcastName, summary='', subtitle='', thumb=podcastImage), podcastName=podcastName, podcastUrl=podcastUrl, podcastImage=podcastImage, title1=L('searchresults')))
+        dir.Append(Function(DirectoryItem(ShowPodcast, title=podcastName, summary='', subtitle='', thumb=Function(GetThumb, url=podcastImage)), podcastName=podcastName, podcastUrl=podcastUrl, podcastImage=podcastImage, title1=L('searchresults')))
 
     if DEBUG_XML_RESPONSE:
-      PMS.Log(dir.Content())
+      Log(dir.Content())
     return dir
 
   else:
 
     # No results returned
 
-    return (MessageContainer(header=L('searchresults'), message=L('searchnoresults'), title1=L('bbcpodcasts')))
+    return (MessageContainer(header=L('searchresults'), message=L('searchnoresults')))
 
 
 
@@ -398,3 +386,13 @@ def TidyString(stringToTidy):
   else:
     return ''
 
+############################
+
+def GetThumb(url):
+  try:
+    data = HTTP.Request(url, cacheTime=CACHE_1MONTH).content
+    return DataObject(data, 'image/jpeg')
+  except:
+    pass
+
+  return Redirect(R(ICON))
