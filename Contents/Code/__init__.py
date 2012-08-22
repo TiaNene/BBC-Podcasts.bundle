@@ -131,8 +131,8 @@ def Browser(sender=False, topLevel=True, stationId=None, stationName=None, genre
 
     for podcast in podcasts:
 
-      podcastName = TidyString(podcast.xpath("./div[@class='pc-results-box-data']/h4/a/text()")[0])
-      podcastUrl = BBC_URL + podcast.xpath("./div[@class='pc-results-box-data']/h4/a")[0].get('href')
+      podcastName = TidyString(podcast.xpath("./div[@class='pc-results-box-data']/h2/a/text()")[0])
+      podcastUrl = BBC_URL + podcast.xpath("./div[@class='pc-results-box-data']/h2/a")[0].get('href')
       podcastImage = podcast.xpath("./div[@class='pc-results-box-artwork']/a/img")[0].get('src')
       podcastImage = re.sub(r'/84/', r'/266/', podcastImage)
 
@@ -238,7 +238,7 @@ def BrowseHighlights(sender, highlightCategory):
     if len(glowPanels):
       glowPanel = glowPanels[0]
 
-      podcastName = TidyString(glowPanel.xpath("./div[@class='pc-infopanel']/h5/text()")[0])
+      podcastName = TidyString(glowPanel.xpath("./div[@class='pc-infopanel']/h3/text()")[0])
       podcastDescription = "\n\n" + TidyString(glowPanel.xpath("./div[@class='pc-infopanel']/p[@class='results-box-description']/text()")[0])
       podcastEpisodeDate = TidyString(glowPanel.xpath("./div[@class='pc-infopanel']/p[@class='pc-result-episode-date']/text()")[0])
       podcastDuration = TidyString(glowPanel.xpath("./div[@class='pc-infopanel']/p[@class='pc-result-episode-duration']/text()")[0])
